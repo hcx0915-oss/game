@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>模擬宇宙：奇物對決</title>
+  <style>
+    :root {
+      --bg-color: #0b0d19;
+      --card-bg: #16192b;
+      --accent-color: #cca661;
+      --text-color: #e0e6ed;
+      --player-color: #4a90e2;
+      --enemy-color: #e74c3c;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .game-container {
+      background-color: var(--card-bg);
+      border: 2px solid var(--accent-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 600px;
+      padding: 24px;
+      box-shadow: 0 0 20px rgba(204, 166, 97, 0.2);
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--accent-color);
+      margin-top: 0;
+      letter-spacing: 2px;
+    }
+
+    .status-panel {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .character-box {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid var(--accent-color);
+    }
+
+    .character-box.player { border-color: var(--player-color); }
+    .character-box.enemy { border-color: var(--enemy-color); }
+
+    .hp-bar-bg {
+      background: #333;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .hp-bar-fill {
+      height: 100%;
+      width: 100%;
+      transition: width 0.3s ease;
+    }
+
+    .player .hp-bar-fill { background: var(--player-color); }
+    .enemy .hp-bar-fill { background: var(--enemy-color); }
+
+    .relic-info {
+      font-size: 0.85em;
+      color: #aaa;
+      margin-top: 6px;
+    }
+
+    .log-box {
+      background: #080910;
+      border: 1px solid #2a2e45;
+      border-radius: 8px;
+      height: 200px;
+      overflow-y: auto;
+      padding: 12px;
+      font-size: 0.9em;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .log-entry { margin-bottom: 4px; }
+    .log-entry.highlight { color: var(--accent-color); }
+    .log-entry.damage
