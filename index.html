@@ -99,4 +99,362 @@
 
     .log-entry { margin-bottom: 4px; }
     .log-entry.highlight { color: var(--accent-color); }
-    .log-entry.damage
+    .log-entry.damage { color: #ff6b6b; }
+
+    .action-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid var(--accent-color);
+      background: #22263d;
+      color: white;
+      font-size: 1em;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--accent-color);
+      color: black;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--accent-color);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      width: 80%;
+      max-width: 400px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-container">
+  <h1>🌌 模擬宇宙：奇物對決</h1>
+
+  <div class="status-panel">
+    <div class="character-box player">
+      <div id="player-name">開拓者</div>
+      <div>HP: <span id="player-hp">100</span> / 100</div>
+      <div class="hp-bar-bg"><div id="player-hp-bar" class="hp-bar-fill"></div></div>
+      <div class="relic-info">✨ <span id="player-relic-name">未抽取</span></div>
+    </div>
+    <div class="character-box enemy">
+      <div>👾 敵人</div>
+      <div>HP: <span id="enemy-hp">100</span> / 100</div>
+      <div class="hp-bar-bg"><div id="enemy-hp-bar" class="hp-bar-fill"></div></div>
+      <div class="relic-info">✨ <span id="enemy-relic-name">未抽取</span></div>
+    </div>
+  </div>
+
+  <div class="log-box" id="log-box"></div>
+
+  <div class="action-panel" id="controls">
+    <div class="btn-group">
+      <button onclick="playRound('剪刀')">✌️ 剪刀</button>
+      <button onclick="playRound('石頭')">✊ 石頭</button>
+      <button onclick="playRound('布')">✋ 布</button>
+    </div>
+    <button id="cheat-btn" style="display:none; background:#8e44ad;" onclick="openCheatModal()">💻 啟動《宇宙級作弊協議》</button>
+    <button id="restart-btn" style="display:none;" onclick="initGame()">🔄 重新進入模擬宇宙</button>
+  </div>
+</div>
+
+<!-- 作弊選單 Modal -->
+<div id="cheat-modal" class="modal">
+  <div class="modal-content">
+    <h3>💻 指定敵人的出拳</h3>
+    <div class="btn-group">
+      <button onclick="useCheat('剪刀')">指定剪刀</button>
+      <button onclick="useCheat('石頭')">指定石頭</button>
+      <button onclick="useCheat('布')">指定布</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const BASE_HP = 100;
+  const BASE_DAMAGE = 20;
+  const options = ["剪刀", "石頭", "布"];
+
+  const relics = {
+    "反物理骰子": "每回合結束擲骰，2~6 對敵人造成點數×3傷害；1則自己受到15傷害。",
+    "歷史從未存在的紙頁": "開場使敵人損失30點生命。",
+    "敵我辨識故障晶片": "攻擊有機率反彈，或使對手攻擊自己。",
+    "鏡中人的反叛": "猜拳勝負反轉，平手不變。",
+    "宇宙級作弊協議": "每場戰鬥一次，修改對手出拳，有30%機率觸發15點反擊。"
+  };
+
+  let playerName = "開拓者";
+  let playerHp = BASE_HP;
+  let enemyHp = BASE_HP;
+  let playerRelic = "";
+  let enemyRelic = "";
+  let playerCheatUsed = false;
+  let enemyCheatUsed = false;
+  let roundNum = 1;
+
+  function log(msg, type = "") {
+    const logBox = document.getElementById("log-box");
+    const div = document.createElement("div");
+    div.className = `log-entry ${type}`;
+    div.innerHTML = msg;
+    logBox.appendChild(div);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function updateUI() {
+    document.getElementById("player-hp").innerText = Math.max(0, playerHp);
+    document.getElementById("enemy-hp").innerText = Math.max(0, enemyHp);
+
+    document.getElementById("player-hp-bar").style.width = `${Math.max(0, (playerHp / BASE_HP) * 100)}%`;
+    document.getElementById("enemy-hp-bar").style.width = `${Math.max(0, (enemyHp / BASE_HP) * 100)}%`;
+
+    if (playerRelic === "宇宙級作弊協議" && !playerCheatUsed && playerHp > 0 && enemyHp > 0) {
+      document.getElementById("cheat-btn").style.display = "block";
+    } else {
+      document.getElementById("cheat-btn").style.display = "none";
+    }
+  }
+
+  function judge(player, enemy) {
+    if (player === enemy) return 0;
+    if (
+      (player === "剪刀" && enemy === "布") ||
+      (player === "石頭" && enemy === "剪刀") ||
+      (player === "布" && enemy === "石頭")
+    ) {
+      return 1;
+    }
+    return -1;
+  }
+
+  function initGame() {
+    const inputName = prompt("請輸入你的冒險者名字：", "開拓者");
+    playerName = inputName ? inputName.trim() : "開拓者";
+    document.getElementById("player-name").innerText = playerName;
+
+    document.getElementById("log-box").innerHTML = "";
+    document.getElementById("restart-btn").style.display = "none";
+    toggleGameButtons(true);
+
+    playerHp = BASE_HP;
+    enemyHp = BASE_HP;
+    playerCheatUsed = false;
+    enemyCheatUsed = false;
+    roundNum = 1;
+
+    const relicKeys = Object.keys(relics);
+    playerRelic = relicKeys[Math.floor(Math.random() * relicKeys.length)];
+    enemyRelic = relicKeys[Math.floor(Math.random() * relicKeys.length)];
+
+    document.getElementById("player-relic-name").innerText = `${playerRelic}`;
+    document.getElementById("enemy-relic-name").innerText = `${enemyRelic}`;
+
+    log(`歡迎【${playerName}】進入模擬宇宙！`, "highlight");
+    log(`✨ 你獲得奇物：《${playerRelic}》 - ${relics[playerRelic]}`);
+    log(`✨ 敵人獲得奇物：《${enemyRelic}》 - ${relics[enemyRelic]}`);
+
+    // 開場奇物生效
+    if (playerRelic === "歷史從未存在的紙頁") {
+      enemyHp -= 30;
+      log("📜 你的奇物改寫了敵人的歷史！敵人損失 30 HP。", "damage");
+    }
+    if (enemyRelic === "歷史從未存在的紙頁") {
+      playerHp -= 30;
+      log("📜 敵人的奇物改寫了你的歷史！你損失 30 HP。", "damage");
+    }
+
+    updateUI();
+    checkGameOver();
+  }
+
+  let overrideEnemyChoice = null;
+
+  function openCheatModal() {
+    document.getElementById("cheat-modal").style.display = "flex";
+  }
+
+  function useCheat(choice) {
+    document.getElementById("cheat-modal").style.display = "none";
+    playerCheatUsed = true;
+
+    if (Math.random() < 0.30) {
+      overrideEnemyChoice = "COUNTER";
+      log("💻 協議反噬！敵人將複製你的出拳！", "damage");
+    } else {
+      overrideEnemyChoice = choice;
+      log(`💻 敵人的出拳已被修改為【${choice}】！`, "highlight");
+    }
+    document.getElementById("cheat-btn").style.display = "none";
+  }
+
+  function playRound(playerChoice) {
+    log(`<br>--- 第 ${roundNum} 回合 ---`, "highlight");
+
+    let enemyChoice = options[Math.floor(Math.random() * options.length)];
+    let cheatCounterPlayer = false;
+    let cheatCounterEnemy = false;
+
+    // 處理玩家作弊
+    if (overrideEnemyChoice) {
+      if (overrideEnemyChoice === "COUNTER") {
+        enemyChoice = playerChoice;
+        cheatCounterPlayer = true;
+      } else {
+        enemyChoice = overrideEnemyChoice;
+      }
+      overrideEnemyChoice = null;
+    }
+
+    // 處理敵人作弊
+    if (enemyRelic === "宇宙級作弊協議" && !enemyCheatUsed) {
+      enemyCheatUsed = true;
+      if (Math.random() < 0.30) {
+        enemyChoice = playerChoice;
+        cheatCounterEnemy = true;
+        log("💻 敵人觸發作弊反噬！敵人複製你的出拳！", "damage");
+      } else {
+        const oldChoice = playerChoice;
+        playerChoice = options[Math.floor(Math.random() * options.length)];
+        log(`💻 敵人修改了你的出拳！${oldChoice} → ${playerChoice}`, "damage");
+      }
+    }
+
+    log(`你出了：${playerChoice} | 敵人出了：${enemyChoice}`);
+
+    // 勝負判定
+    let result = judge(playerChoice, enemyChoice);
+
+    if (playerRelic === "鏡中人的反叛" && result !== 0) {
+      result *= -1;
+      log("🪞 你的《鏡中人的反叛》顛倒了勝負！");
+    }
+    if (enemyRelic === "鏡中人的反叛" && result !== 0) {
+      result *= -1;
+      log("🪞 敵人的《鏡中人的反叛》顛倒了勝負！");
+    }
+
+    // 傷害結算與敵我辨識故障晶片
+    if (result === 0) {
+      log("🤝 平手！雙方沒有造成猜拳傷害。");
+    } else if (result === 1) {
+      if (playerRelic === "敵我辨識故障晶片" && Math.random() < 0.20) {
+        playerHp -= BASE_DAMAGE;
+        log("🧩 你的攻擊遭到反彈！你受到 20 點傷害。", "damage");
+      } else if (enemyRelic === "敵我辨識故障晶片" && Math.random() < 0.20) {
+        enemyHp -= BASE_DAMAGE;
+        log("🧩 敵人的辨識晶片故障，敵人自傷 20 點！", "damage");
+      } else {
+        enemyHp -= BASE_DAMAGE;
+        log("🎉 你擊中敵人！造成 20 點傷害。");
+      }
+    } else {
+      if (enemyRelic === "敵我辨識故障晶片" && Math.random() < 0.20) {
+        enemyHp -= BASE_DAMAGE;
+        log("🧩 敵人認錯目標，攻擊了自己！", "damage");
+      } else if (playerRelic === "敵我辨識故障晶片" && Math.random() < 0.20) {
+        playerHp -= BASE_DAMAGE;
+        log("🧩 你的辨識晶片故障！敵人攻擊反彈到你身上。", "damage");
+      } else {
+        playerHp -= BASE_DAMAGE;
+        log("💥 敵人擊中你！造成 20 點傷害。", "damage");
+      }
+    }
+
+    // 作弊反噬傷害
+    if (cheatCounterPlayer) {
+      playerHp -= 15;
+      log("💻 敵人反擊！你額外受到 15 點傷害。", "damage");
+    }
+    if (cheatCounterEnemy) {
+      playerHp -= 15;
+      log("💻 敵人的作弊反擊命中你！額外受到 15 點傷害。", "damage");
+    }
+
+    // 反物理骰子（已修改為 點數 × 3 傷害）
+    if (playerHp > 0 && enemyHp > 0) {
+      if (playerRelic === "反物理骰子") {
+        const dice = Math.floor(Math.random() * 6) + 1;
+        log(`🎲 你的反物理骰子擲出：${dice}`);
+        if (dice === 1) {
+          playerHp -= 15;
+          log("☠️ 骰子反噬！你受到 15 點傷害。", "damage");
+        } else {
+          const dmg = dice * 3;
+          enemyHp -= dmg;
+          log(`✨ 骰子造成 ${dmg} 點額外傷害！`);
+        }
+      }
+
+      if (enemyRelic === "反物理骰子" && playerHp > 0 && enemyHp > 0) {
+        const dice = Math.floor(Math.random() * 6) + 1;
+        log(`🎲 敵人的反物理骰子擲出：${dice}`);
+        if (dice === 1) {
+          enemyHp -= 15;
+          log("☠️ 敵人的骰子反噬！敵人受到 15 點傷害。", "damage");
+        } else {
+          const dmg = dice * 3;
+          playerHp -= dmg;
+          log(`💥 敵人的骰子對你造成 ${dmg} 點傷害！`, "damage");
+        }
+      }
+    }
+
+    roundNum++;
+    updateUI();
+    checkGameOver();
+  }
+
+  function toggleGameButtons(enable) {
+    const btns = document.querySelectorAll(".action-panel button:not(#restart-btn)");
+    btns.forEach(b => b.disabled = !enable);
+  }
+
+  function checkGameOver() {
+    if (playerHp <= 0 || enemyHp <= 0) {
+      log("<br>🌟 戰鬥結束 🌟", "highlight");
+      if (playerHp <= 0 && enemyHp <= 0) {
+        log("💥 雙方同時倒下！本場戰鬥平局！");
+      } else if (enemyHp <= 0) {
+        log(`🏆 開拓者【${playerName}】獲勝！`, "highlight");
+      } else {
+        log("💀 你倒下了！敵人取得勝利。", "damage");
+      }
+      toggleGameButtons(false);
+      document.getElementById("restart-btn").style.display = "block";
+    }
+  }
+
+  window.onload = initGame;
+</script>
+</body>
+</html>
