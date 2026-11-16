@@ -44,6 +44,27 @@
       letter-spacing: 2px;
     }
 
+    .setup-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .setup-bar input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #2a2e45;
+      background: #080910;
+      color: white;
+      font-size: 0.95em;
+    }
+
+    .setup-bar button {
+      flex: 0 0 auto;
+      padding: 8px 16px;
+    }
+
     .status-panel {
       display: flex;
       justify-content: space-between;
@@ -160,6 +181,11 @@
 <div class="game-container">
   <h1>🌌 模擬宇宙：奇物對決</h1>
 
+  <div class="setup-bar">
+    <input type="text" id="name-input" placeholder="輸入冒險者名字（預設：開拓者）" value="開拓者">
+    <button onclick="updateName()">更新名字</button>
+  </div>
+
   <div class="status-panel">
     <div class="character-box player">
       <div id="player-name">開拓者</div>
@@ -221,6 +247,14 @@
   let playerCheatUsed = false;
   let enemyCheatUsed = false;
   let roundNum = 1;
+  let overrideEnemyChoice = null;
+
+  function updateName() {
+    const val = document.getElementById("name-input").value.trim();
+    playerName = val || "開拓者";
+    document.getElementById("player-name").innerText = playerName;
+    log(`📝 已將冒險者名字更新為【${playerName}】`, "highlight");
+  }
 
   function log(msg, type = "") {
     const logBox = document.getElementById("log-box");
@@ -258,8 +292,8 @@
   }
 
   function initGame() {
-    const inputName = prompt("請輸入你的冒險者名字：", "開拓者");
-    playerName = inputName ? inputName.trim() : "開拓者";
+    const val = document.getElementById("name-input").value.trim();
+    playerName = val || "開拓者";
     document.getElementById("player-name").innerText = playerName;
 
     document.getElementById("log-box").innerHTML = "";
@@ -270,6 +304,7 @@
     enemyHp = BASE_HP;
     playerCheatUsed = false;
     enemyCheatUsed = false;
+    overrideEnemyChoice = null;
     roundNum = 1;
 
     const relicKeys = Object.keys(relics);
@@ -296,8 +331,6 @@
     updateUI();
     checkGameOver();
   }
-
-  let overrideEnemyChoice = null;
 
   function openCheatModal() {
     document.getElementById("cheat-modal").style.display = "flex";
@@ -400,7 +433,7 @@
       log("💻 敵人的作弊反擊命中你！額外受到 15 點傷害。", "damage");
     }
 
-    // 反物理骰子（已修改為 點數 × 3 傷害）
+    // 反物理骰子（點數 × 3）
     if (playerHp > 0 && enemyHp > 0) {
       if (playerRelic === "反物理骰子") {
         const dice = Math.floor(Math.random() * 6) + 1;
@@ -454,7 +487,7 @@
     }
   }
 
-  window.onload = initGame;
+  document.addEventListener("DOMContentLoaded", initGame);
 </script>
 </body>
 </html>
